@@ -13,7 +13,7 @@ HABR = 'https://habr.com'
 def main_view(request):
     habr_url = HABR + request.path
     r = requests.get(habr_url)
-    soup_html = bs4.BeautifulSoup(r.text, features="html.parser")
+    soup_html = bs4.BeautifulSoup(r.text, features="html5lib")
     add_trademarks_to_all_words_of_length_six(soup_html)
     my_port = request.META['SERVER_PORT']
     update_habr_urls_to_my_server_urls(soup_html, my_port)
