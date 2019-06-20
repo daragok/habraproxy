@@ -65,8 +65,7 @@ def collect_font_urls_from_html(soup_html):
     font_urls = []
     for style_tag in soup_html.find_all('style'):
         font_urls.extend(re.findall(r"url\((.*?)\)", style_tag.text))
-    font_urls = set([f.split('?')[0] for f in font_urls])
-    return font_urls
+    return set([f.split('?')[0] for f in font_urls])
 
 
 def download_missing_fonts_to_static(font_urls):
