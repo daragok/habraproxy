@@ -21,6 +21,7 @@ def main_view(request):
     my_port = request.META['SERVER_PORT']
     update_habr_urls_to_my_server_urls(soup_html, my_port)
     fix_fonts(soup_html)
+    fix_svgs(soup_html)
     return HttpResponse(soup_html.encode('utf-8'))
 
 
@@ -57,7 +58,7 @@ def update_habr_urls_to_my_server_urls(soup_html, port):
 
 def fix_fonts(soup_html):
     font_urls = collect_font_urls_from_html(soup_html)
-    download_missing_fonts_to_static(font_urls)
+    download_missing_files_to_static(font_urls)
     update_html_font_paths(soup_html, font_urls)
 
 
@@ -68,21 +69,45 @@ def collect_font_urls_from_html(soup_html):
     return set([f.split('?')[0] for f in font_urls])
 
 
-def download_missing_fonts_to_static(font_urls):
-    for font_url in font_urls:
-        font_file_path = os.path.join(BASE_DIR, 'static', 'mainapp', *font_url.split('/'))
-        if not os.path.exists(font_file_path):
-            print("Downloading missing font to {}".format(font_file_path))
-            abs_font_url = HABR + font_url
-            r = requests.get(abs_font_url)
-            os.makedirs(os.path.dirname(font_file_path), exist_ok=True)
-            with open(font_file_path, 'wb') as font_file:
-                font_file.write(r.content)
-
-
 def update_html_font_paths(soup_html, font_urls):
     for style_tag in soup_html.find_all('style'):
         style_tag_text = style_tag.text
         for font_url in font_urls:
             style_tag_text = style_tag_text.replace('(' + font_url, '(/static/mainapp' + font_url)
         style_tag.string = style_tag_text
+
+
+def fix_svgs(soup_html):
+    svg_urls = collect_svg_urls_from_html(soup_html)
+    download_missing_files_to_static(svg_urls)
+    update_html_svg_paths(soup_html)
+
+
+def collect_svg_urls_from_html(soup_html):
+    svg_urls = set()
+    for svg_tag in soup_html.find_all('svg'):
+        use = svg_tag.use
+        if use:
+            svg_urls.add(use.get('xlink:href').split('#')[0])
+    return svg_urls
+
+
+def update_html_svg_paths(soup_html):
+    for svg_tag in soup_html.find_all('svg'):
+        use_tag = svg_tag.use
+        if use_tag:
+            use_tag['xlink:href'] = use_tag['xlink:href'].replace(HABR, '/static/mainapp')
+
+
+def download_missing_files_to_static(urls_list):
+    for file_url in urls_list:
+        file_path = os.path.join(BASE_DIR, 'static', 'mainapp', *file_url.replace(HABR, '').split('/'))
+        if not os.path.exists(file_path):
+            file_extension = file_path.split('.')[-1]
+            print("Downloading missing {} file to {}".format(file_extension, file_path))
+            # fonts come without https://habr.com, while svg comes with it, so both cases are handled in the next line
+            abs_file_url = file_url if HABR in file_url else HABR + file_url
+            r = requests.get(abs_file_url)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'wb') as file_obj:
+                file_obj.write(r.content)
