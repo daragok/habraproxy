@@ -4,7 +4,7 @@ import unittest
 import bs4
 
 from mainapp.views import collect_font_urls_from_html, update_html_font_paths, collect_svg_urls_from_html, \
-    update_html_svg_paths
+    update_html_svg_paths, update_habr_urls_to_my_server_urls
 
 
 class TestHabraProxyMethods(unittest.TestCase):
@@ -43,6 +43,17 @@ class TestHabraProxyMethods(unittest.TestCase):
         update_html_svg_paths(soup)
         updated_svg_urls = collect_svg_urls_from_html(soup)
         self.assertEqual(updated_svg_urls, {'/static/mainapp/images/1560786911/common-svg-sprite.svg'})
+
+    def test_update_habr_urls_to_my_server_urls(self):
+        soup = self._get_mock_html_soup('test_update_habr_urls_to_my_server_urls.html')
+        update_habr_urls_to_my_server_urls(soup, port=8003)
+        hrefs = {a.get('href') for a in soup.find_all('a')}
+        self.assertEqual(hrefs, {'http://127.0.0.1:8003/ru/',
+                                 'http://127.0.0.1:8003/ru/companies/',
+                                 'http://127.0.0.1:8003/ru/hubs/',
+                                 'http://127.0.0.1:8003/ru/news/',
+                                 'http://127.0.0.1:8003/ru/sandbox/',
+                                 'http://127.0.0.1:8003/ru/users/'})
 
     def _get_mock_html_soup(self, name):
         html_path = os.path.join(self.mocks, name)
